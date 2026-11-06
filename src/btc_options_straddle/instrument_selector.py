@@ -1,6 +1,11 @@
 
 import asyncio
 import inspect
+from decimal import Decimal
+
+from btc_options_straddle.orderbook_validator import (
+    InstrumentConstraints,
+)
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -18,6 +23,8 @@ class StraddleSelection:
     strike: float
     call_symbol: str
     put_symbol: str
+    call_constraints: InstrumentConstraints
+    put_constraints: InstrumentConstraints
 
 
 async def resolve(value):
@@ -25,6 +32,12 @@ async def resolve(value):
         return await value
     return value
 
+def extract_constraints(instrument) -> InstrumentConstraints:
+    return InstrumentConstraints(
+        min_quantity=Decimal(str(instrument.min_quantity)),
+        quantity_increment=Decimal(str(instrument.size_increment)),
+        price_increment=Decimal(str(instrument.price_increment)),
+    )
 
 async def select_atm_straddle():
     client = BybitHttpClient(
@@ -128,6 +141,8 @@ async def select_atm_straddle():
         strike=selected_strike,
         call_symbol=str(legs["CALL"].raw_symbol),
         put_symbol=str(legs["PUT"].raw_symbol),
+        call_constraints=extract_constraints(legs["CALL"]),
+        put_constraints=extract_constraints(legs["PUT"]),
     )
 
 
