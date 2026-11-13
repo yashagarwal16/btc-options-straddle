@@ -9,3 +9,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# Local interview and assignment materials
+/INTERVIEW_STUDY_GUIDE.md
+/MernPlus Assignement.pdf

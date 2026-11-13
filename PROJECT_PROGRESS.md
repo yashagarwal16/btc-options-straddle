@@ -54,7 +54,6 @@ src/btc_options_straddle/
   strategy.py
 tests/
   test_strategy.py
-INTERVIEW_STUDY_GUIDE.md
 ```
 
 The framework supplies adapter connectivity, instrument and quote data,
