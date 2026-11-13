@@ -1,31 +1,29 @@
+"""Build and run the Bybit Testnet BTC straddle node."""
 
 from nautilus_trader.common import Environment
 from nautilus_trader.live import LiveNode
 from nautilus_trader.model import TraderId
-
 from nautilus_trader.adapters.bybit import (
     BybitDataClientFactory,
     BybitEnvironment,
+    BybitExecutionClientFactory,
 )
 
 from btc_options_straddle.config import (
     NODE_NAME,
     TRADER_ID,
-    BYBIT_ENVIRONMENT,
-    get_bybit_data_config,
+    bybit_data_config,
+    bybit_execution_config,
 )
+from btc_options_straddle.strategy import BtcShortStraddle
 
 
 def build_node() -> LiveNode:
-    """Build a read-only Bybit Testnet market-data node."""
-
-    # Enforce Testnet before constructing the client.
-    if BYBIT_ENVIRONMENT != BybitEnvironment.TESTNET:
-        raise RuntimeError(
-            "SAFETY ERROR: Only Bybit TESTNET is permitted."
-        )
-
-    config = get_bybit_data_config()
+    """Build a Testnet-only node with Bybit data and execution clients."""
+    if bybit_data_config().environment != BybitEnvironment.TESTNET:
+        raise RuntimeError("Only Bybit Testnet is permitted")
+    if bybit_execution_config().environment != BybitEnvironment.TESTNET:
+        raise RuntimeError("Only Bybit Testnet execution is permitted")
 
     node = (
         LiveNode.builder(
@@ -33,33 +31,22 @@ def build_node() -> LiveNode:
             TraderId.from_str(TRADER_ID),
             Environment.LIVE,
         )
-        .add_data_client(
-            None,
-            BybitDataClientFactory(),
-            config,
-        )
+        .add_data_client(None, BybitDataClientFactory(), bybit_data_config())
+        .add_exec_client(None, BybitExecutionClientFactory(), bybit_execution_config())
         .build()
     )
-
+    node.add_strategy(BtcShortStraddle())
     return node
 
 
 def main() -> None:
-    print("=" * 55)
-    print("BTC OPTIONS STRADDLE")
-    print("BYBIT TESTNET MARKET DATA")
-    print("=" * 55)
-
-    print("[SAFETY] Environment: TESTNET")
-    print("[SAFETY] Product: OPTION")
-    print("[SAFETY] Execution client: DISABLED")
-    print("[SAFETY] Order submission: DISABLED")
-
+    print("Bybit Testnet BTC short straddle")
+    print("Execution is enabled. This program can submit Testnet orders.")
     node = build_node()
-
-    print("\nStarting NautilusTrader node...")
-
-    node.run()
+    try:
+        node.run()
+    finally:
+        node.dispose()
 
 
 if __name__ == "__main__":

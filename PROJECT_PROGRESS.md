@@ -1,135 +1,63 @@
 # BTC Options Straddle — Project Progress
 
-**Organization:** Mernplus Technologies LLP
-**Assignment:** Software Engineer Intern — Algorithmic Trading
-**Strategy:** BTC ATM Short Straddle
-**Exchange:** Bybit Testnet ONLY
-**Framework:** NautilusTrader 2.0.0rc8
+**Assignment:** Mernplus Technologies LLP, Software Engineer Intern — Algorithmic Trading
+**Framework:** NautilusTrader 2.0.0rc8 (pinned)
 **Python:** 3.14.10
+**Venue:** Bybit Testnet only
 
----
+## Current implementation
 
-## 1. Project Objective
+- Registers Bybit Testnet option data and execution clients on one `LiveNode`.
+- Loads BTC option instruments through the native adapter/cache.
+- Selects the soonest expiry and subscribes to the native option chain to receive
+  the ATM strike derived from Bybit's option reference price.
+- Submits SELL market orders for the matching ATM call and put.
+- Tracks fill events and computes entry premium from actual fill quantities and
+  prices.
+- Monitors both option ask quotes for the assignment's 1% stop and 2% target.
+- Submits BUY market exits for cached short positions; avoids a second entry
+  when a matching short pair is found after execution reconciliation.
+- Cancels outstanding orders and attempts to flatten short positions on normal
+  strategy shutdown. Any residual exposure must be checked after restart.
+- Refuses to submit a new entry when reconciled BTC option orders remain open.
+- Retries a rejected, canceled, or expired exit once, then reports unresolved
+  exposure for operator review.
 
-Build and test a BTC ATM Short Straddle using NautilusTrader
-and Bybit Testnet.
+## Verification status
 
-The strategy must discover BTC option contracts, select matching
-ATM call and put contracts, execute both short positions, monitor
-combined premium, and manage exits.
+- Offline unit tests cover pair selection, premium thresholds, partial fill
+  accumulation, rejected entry handling, and restart recovery.
+- Current offline test result: 10 passed.
+- No Bybit Testnet trading session has been run.
+- Bybit order acceptance, fills, exit behavior, and venue reconciliation have
+  not been integration-verified.
+- Bybit Testnet account/API access returned error `10024` for regulatory
+  restrictions. No attempt was made to bypass the restriction or use another
+  environment.
+- Strategy-side stop/target checks do not run while the process is offline.
 
-## 2. Assignment Requirements
+## Safety
 
-### Level 1
-- [ ] Bybit Testnet integration
-- [ ] Subscribe to BTC options market data
-- [ ] Discover available BTC option contracts
-- [ ] Retrieve BTC underlying reference price
-- [ ] Select nearest ATM strike
-- [ ] Match call and put by strike and expiry
-- [ ] Submit SELL orders for both legs
-- [ ] Track order acknowledgements and executions
-- [ ] Track open positions
-- [ ] Handle one-leg execution failures
+- Both Bybit clients explicitly use `BybitEnvironment.TESTNET` and options only.
+- Credentials are loaded from the Testnet-specific environment variables.
+- There is no Mainnet fallback or Mainnet endpoint in the strategy path.
+- Running `uv run python -m btc_options_straddle.main` enables Testnet execution
+  and can submit orders. It has not been run during this work.
+- `pyproject.toml` and `uv.lock` were not changed.
 
-### Level 2
-- [ ] 1% stop-loss
-- [ ] 2% take-profit
-- [ ] Combined buyback premium using ask-side quotes
-- [ ] Consistent quantity handling
-- [ ] Partial-fill handling
-- [ ] Duplicate exit prevention
-- [ ] Rejected-order handling
-- [ ] Missing/stale quote handling
-- [ ] Verify both positions are closed
+## Architecture
 
-## 3. Environment
+```text
+src/btc_options_straddle/
+  config.py
+  main.py
+  strategy.py
+tests/
+  test_strategy.py
+INTERVIEW_STUDY_GUIDE.md
+```
 
-- OS: Windows 11 + WSL2 Ubuntu
-- Python: 3.14.10
-- NautilusTrader: 2.0.0rc8
-- uv: 0.13.7
-- Git: 2.53.0
-
-Project directory:
-`/home/yash/projects/btc-options-straddle`
-
-Virtual environment:
-`.venv`
-
-## 4. Completed Milestones
-
-### Milestone 0 — Environment and Repository
-- [x] WSL2 configured
-- [x] VS Code connected to WSL
-- [x] Python installed
-- [x] Virtual environment created
-- [x] NautilusTrader installed and import verified
-- [x] Git initialized
-- [x] GitHub repository created
-- [x] Initial README committed
-- [x] Dependencies declared
-- [x] Git working tree verified clean
-
-### Milestone 1 — Adapter Inspection
-- [x] Bybit adapter import verified
-- [x] BybitDataClientConfig identified
-- [x] BybitExecutionClientConfig identified
-- [x] BybitDataClientFactory identified
-- [x] BybitExecutionClientFactory identified
-- [x] BybitEnvironment.TESTNET identified
-- [x] BybitProductType.OPTION identified
-- [x] Correct LiveNode import verified
-
-## 5. Current Implementation Status
-
-**Current milestone:** Bybit Testnet market-data integration
-
-- [ ] LiveNode configuration
-- [ ] Bybit data client registration
-- [ ] Testnet connection
-- [ ] BTC options instrument discovery
-- [ ] Underlying reference price retrieval
-- [ ] ATM contract selection
-
-No trading functionality has been implemented or verified yet.
-
-## 6. Safety Requirements
-
-- Bybit Testnet only.
-- Never submit live trading orders.
-- No API credentials committed to Git.
-- Keep execution disabled during market-data development.
-- Validate all order quantities and prices.
-- Prevent duplicate exit orders.
-- Verify both option positions are closed.
-
-## 7. Engineering Decisions and Debugging Log
-
-### 2026-11-06
-- Confirmed NautilusTrader 2.0.0rc8.
-- Confirmed Bybit options product support.
-- Confirmed TESTNET and OPTION enum members.
-- Correct LiveNode import:
-  `from nautilus_trader.live import LiveNode`
-- Incorrect import discovered:
-  `from nautilus_trader.live.node import LiveNode`
-- Confirmed configuration classes are extension-backed.
-
-## 8. GitHub
-
-Repository:
-https://github.com/yashagarwal16/btc-options-straddle
-
-## 9. Final Documentation Checklist
-
-- [ ] README with installation and usage
-- [ ] PROJECT_PROGRESS.md
-- [ ] PROJECT_HANDOVER.md
-- [ ] Architecture documentation
-- [ ] Configuration and environment documentation
-- [ ] Strategy explanation
-- [ ] Risk management explanation
-- [ ] Test results
-- [ ] Known limitations
-- [ ] Interview preparation notes
+The framework supplies adapter connectivity, instrument and quote data,
+instrument constraints, orders, positions, lifecycle events, and execution
+reconciliation. Strategy code contains the ATM pair choice, entry policy,
+combined-premium calculation, and stop/target decisions.
