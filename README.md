@@ -66,7 +66,3 @@ reconciliation. No live or Testnet trading session has been run. Bybit Testnet
 access displayed error `10024` with a regulatory restriction during account/API
 access, so the execution path could not be integration-tested. This restriction
 has not been bypassed.
-
-For interview preparation, see [INTERVIEW_STUDY_GUIDE.md](INTERVIEW_STUDY_GUIDE.md)
-for a two-hour learning plan, code walkthrough, lifecycle map, limitations, and
-practice questions.
